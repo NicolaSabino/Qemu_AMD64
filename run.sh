@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e -x
 
+# resources
+# https://ayeks.de/posts/2015-11-30-running-your-own-kernel-in-qemu/
+# https://vccolombo.github.io/cybersecurity/linux-kernel-qemu-setup/
+# https://www.kernel.org/
+
 KERNEL_LINK=https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.3.8.tar.xz
 KERNEL_FILE=zImage.tar.xz
 KERNEL_DIR=zImage
@@ -41,7 +46,8 @@ make defconfig
 make -j`nproc`
 popd > /dev/null
 
-find . -name bzImage
+# create initial filesystem
+mkinitramfs -o initrd.img
 
 # extract alpine filesystem if folder does not exists
 # if [ ! -d $FS_DIR ]; then
@@ -56,11 +62,12 @@ find . -name bzImage
 
 
 # execute qemu
-# qemu-system-x86_64 \
-#     -kernel $KERNEL_FILE \
-#     -hda $FS_FILE \
-#     -append "console=ttyS0" \
-#     -nographic -m 512M
+qemu-system-x86_64 \
+    -kernel $LINUX_DIR \
+    -hda $FS_FILE \
+    -append "console=ttyS0" \
+    -nographic \
+    -m 512M
 
 
 
