@@ -1,74 +1,79 @@
 #!/bin/bash
-set -e -x
+set -ex
 
 # resources
-# https://ayeks.de/posts/2015-11-30-running-your-own-kernel-in-qemu/
-# https://vccolombo.github.io/cybersecurity/linux-kernel-qemu-setup/
-# https://www.kernel.org/
+# https://medium.com/@kiki.tokamuro/creating-initramfs-5cca9b524b5a
+# https://lyngvaer.no/log/create-linux-initramfs
+# https://linuxconfig.org/introduction-to-the-linux-kernel-log-levels
+# http://lists.busybox.net/pipermail/busybox/2010-July/072895.html
 
-KERNEL_LINK=https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.3.8.tar.xz
-KERNEL_FILE=zImage.tar.xz
-KERNEL_DIR=zImage
-LINUX_DIR=$KERNEL_DIR/linux-6.3.8
-FS_LINK=http://dl-cdn.alpinelinux.org/alpine/v3.14/releases/x86_64/alpine-minirootfs-3.14.2-x86_64.tar.gz
-FS_FILE=sysroot.tar.gz
-FS_DIR=sysroot
+function build_kernel {
+    tar xvf download/linux-6.3.8.tar.xz
+    pushd linux-6.3.8
+    make x86_64_defconfig
+    make -j$(nproc)
+    popd
+}
 
-ALPINE_LINUX_LINK=https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-standard-3.18.2-x86_64.iso
+function create_initramfs {
+    rm -rf initramfs
+    mkdir -p initramfs/{bin,dev,etc,home,mnt,proc,sys,usr,tmp}
+    cp download/busybox initramfs/bin/busybox
+    initramfs/bin/busybox --install initramfs/bin
+    echo Setup init file
+    init_script_setup
+    pushd initramfs
+    find . | cpio -ov --format=newc | gzip -9 > ../initramfz
+    popd
+}
 
-sudo apt-get -y install \
-    qemu-system-x86 \
-    git \
-    fakeroot \
-    build-essential \
-    ncurses-dev \
-    xz-utils \
-    libssl-dev \
-    bc \
-    flex \
-    libelf-dev \
-    debootstrap
+function init_script_setup {
+cat >>initramfs/init << EOF
+#!/bin/busybox sh
 
-# kernel
-if [ ! -f $KERNEL_FILE ]; then
-    wget $KERNEL_LINK -O zImage.tar.xz
-fi
+mount -t devtmpfs  devtmpfs  /dev
+mount -t proc      proc      /proc
+mount -t sysfs     sysfs     /sys
+mount -t tmpfs     tmpfs     /tmp
 
-# extract kernel if folder does not exists
-if [ ! -d $KERNEL_DIR ]; then
-    mkdir $KERNEL_DIR
-    tar -xvf zImage.tar.xz -C $KERNEL_DIR
-fi
+cat << "END"
 
-# build kernel
-pushd $LINUX_DIR > /dev/null
-make defconfig
-make -j`nproc`
-popd > /dev/null
+    Hello World :)
+    Boot in $(cut -d' ' -f1 /proc/uptime) seconds
 
-# create initial filesystem
-mkinitramfs -o initrd.img
+END
 
-# extract alpine filesystem if folder does not exists
-# if [ ! -d $FS_DIR ]; then
-#     mkdir $FS_DIR
-#     tar -xzvf sysroot.tar.gz -C $FS_DIR
-# fi
+setsid cttyhack sh
+EOF
+sudo chmod +x initramfs/init
+}
 
-# alpine file sysem
-# if [ ! -f $FS_FILE ]; then  
-#     wget $FS_LINK -O sysroot.tar.gz
-# fi
+function download_data {
+    sudo apt-get -y install qemu-system-x86
+    mkdir -p download 
+    pushd download
+    rm -rf *
+    wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.3.8.tar.xz
+    wget https://www.busybox.net/downloads/binaries/1.26.2-defconfig-multiarch/busybox-x86_64 -O busybox
+    chmod +x busybox
+    popd
+}
 
+function run_qemu {
+    qemu-system-x86_64 \
+        -kernel linux-6.3.8/arch/x86_64/boot/bzImage\
+        -initrd initramfz \
+        -append "loglevel=3 console=ttyS0 init=/init" \
+        -m 2G \
+        -serial stdio \
+        -display none
+}
 
-# execute qemu
-qemu-system-x86_64 \
-    -kernel $LINUX_DIR \
-    -hda $FS_FILE \
-    -append "console=ttyS0" \
-    -nographic \
-    -m 512M
-
+# call each fucntion one by one
+download_data
+build_kernel
+create_initramfs
+run_qemu
 
 
 
