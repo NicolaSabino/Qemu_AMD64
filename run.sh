@@ -6,6 +6,7 @@ set -ex
 # https://lyngvaer.no/log/create-linux-initramfs
 # https://linuxconfig.org/introduction-to-the-linux-kernel-log-levels
 # http://lists.busybox.net/pipermail/busybox/2010-July/072895.html
+# https://www.cyberciti.biz/tips/compiling-linux-kernel-26.html
 
 function build_kernel {
     tar xvf download/linux-6.3.8.tar.xz
@@ -51,7 +52,12 @@ sudo chmod +x initramfs/init
 function download_data {
     sudo apt-get -y install \
         qemu-system-x86 \
-        flex
+        build-essential \
+        libncurses-dev \
+        bison \
+        flex \
+        libssl-dev \
+        libelf-dev
 
     mkdir -p download 
     pushd download
