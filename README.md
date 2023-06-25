@@ -6,7 +6,7 @@ The script requires sudo permission.
 ## Usage
 
 ```bash
-mkdir sandbox
+mkdir sandbox && cd sandbox
 wget https://raw.githubusercontent.com/NicolaSabino/Qemu_AMD64/master/run.sh
 chmod +x run.sh
 ./run.sh
