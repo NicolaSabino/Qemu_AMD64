@@ -49,7 +49,10 @@ sudo chmod +x initramfs/init
 }
 
 function download_data {
-    sudo apt-get -y install qemu-system-x86
+    sudo apt-get -y install \
+        qemu-system-x86 \
+        flex
+
     mkdir -p download 
     pushd download
     rm -rf *
