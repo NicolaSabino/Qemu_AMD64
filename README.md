@@ -1,6 +1,6 @@
 # Simple boot-able Linux Image
 
-Simple shell script that create and run an X86_64 Linux filesystem image using QEMU.
+Simple shell script that create and run an x86_64 Linux filesystem image using QEMU.
 The script requires sudo permission.
 
 ## Usage
